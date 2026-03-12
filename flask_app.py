@@ -1,7 +1,7 @@
 """GreenLens — Flask Backend API"""
 from flask import Flask, jsonify, request, render_template, send_file
 from flask_cors import CORS
-import sys, io
+import sys, io, time
 sys.path.insert(0, ".")
 
 from scorer import score_company, score_peers, company_to_ticker
@@ -13,30 +13,75 @@ from stock_analysis import get_chart_data
 app = Flask(__name__)
 CORS(app)
 
+# Demo-focused in-memory caches to avoid recomputing the same company repeatedly
+API_CACHE = {}
+TICKER_CACHE = {}
+CHART_CACHE = {}
+API_CACHE_TTL = 1800   # 30 minutes
+CHART_CACHE_TTL = 900  # 15 minutes
+
+
+def _cache_get(store, key, ttl):
+    entry = store.get(key)
+    if not entry:
+        return None
+    if time.time() - entry["ts"] > ttl:
+        store.pop(key, None)
+        return None
+    return entry["value"]
+
+
+def _cache_set(store, key, value):
+    store[key] = {"value": value, "ts": time.time()}
+
+
+def _company_key(company: str) -> str:
+    return f"company:{(company or '').strip().lower()}"
+
+
+def _ticker_key(ticker: str) -> str:
+    return f"ticker:{(ticker or '').strip().upper()}"
+
 @app.route("/")
 def index():
     return render_template("index.html")
 
 @app.route("/api/score", methods=["POST"])
 def api_score():
-    data    = request.json
+    data = request.json or {}
     company = data.get("company", "").strip()
-    ticker  = data.get("ticker", "").strip() or None
+    ticker = data.get("ticker", "").strip() or None
     if not company:
         return jsonify({"error": "Company name required"}), 400
     try:
         if not ticker:
-            ticker = company_to_ticker(company)
+            cached_ticker = _cache_get(TICKER_CACHE, _company_key(company), API_CACHE_TTL)
+            if cached_ticker:
+                ticker = cached_ticker
+            else:
+                ticker = company_to_ticker(company)
+                _cache_set(TICKER_CACHE, _company_key(company), ticker)
+
+        cache_keys = [_company_key(company), _ticker_key(ticker)]
+        for key in cache_keys:
+            cached_payload = _cache_get(API_CACHE, key, API_CACHE_TTL)
+            if cached_payload:
+                return jsonify({**cached_payload, "cached": True})
+
         result = score_company(company, ticker)
-        peers  = score_peers(ticker)
-        eli5   = generate_eli5(result)
-        imps   = result["improvements"]
-        return jsonify({
+        peers = score_peers(ticker)
+        eli5 = generate_eli5(result)
+        payload = {
             "result": result,
-            "peers":  peers,
-            "eli5":   eli5,
-            "improvements": imps,
-        })
+            "peers": peers,
+            "eli5": eli5,
+            "improvements": result["improvements"],
+        }
+
+        for key in cache_keys:
+            _cache_set(API_CACHE, key, payload)
+
+        return jsonify({**payload, "cached": False})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -47,10 +92,17 @@ def api_stock_chart():
     if not ticker:
         return jsonify({"error": "Ticker required"}), 400
     try:
+        cache_key = f"{ticker.upper()}::{period}"
+        cached_data = _cache_get(CHART_CACHE, cache_key, CHART_CACHE_TTL)
+        if cached_data:
+            return jsonify({**cached_data, "cached": True})
+
         data = get_chart_data(ticker, period)
         if "error" in data:
             return jsonify(data), 404
-        return jsonify(data)
+
+        _cache_set(CHART_CACHE, cache_key, data)
+        return jsonify({**data, "cached": False})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
