@@ -1,0 +1,8 @@
+Flask
+Flask-Cors
+gunicorn
+yfinance
+feedparser
+transformers
+torch
+reportlab

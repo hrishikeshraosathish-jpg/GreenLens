@@ -1,0 +1,2265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GreenLens - ESG Risk Terminal</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #000;
+  color: #FF6600;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* TOP BAR */
+#topbar {
+  background: #000;
+  border-bottom: 1px solid #FF6600;
+  padding: 4px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+#topbar .logo {
+  color: #00FFFF;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 3px;
+}
+#topbar .tagline {
+  color: #FF6600;
+  font-size: 11px;
+}
+#topbar .clock {
+  color: #00FF00;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* NAV TABS */
+#navtabs {
+  background: #000;
+  border-bottom: 1px solid #FF6600;
+  display: flex;
+  flex-shrink: 0;
+}
+.navtab {
+  padding: 5px 20px;
+  cursor: pointer;
+  border-right: 1px solid #333;
+  color: #FF6600;
+  font-size: 11px;
+  letter-spacing: 1px;
+  transition: all 0.1s;
+}
+.navtab:hover { background: #1a0a00; }
+.navtab.active { background: #FF6600; color: #000; font-weight: bold; }
+
+/* MAIN LAYOUT */
+#main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* LEFT SIDEBAR */
+#sidebar {
+  width: 220px;
+  border-right: 1px solid #FF6600;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.sidebar-section {
+  border-bottom: 1px solid #333;
+  padding: 8px;
+}
+
+.sidebar-label {
+  color: #00FFFF;
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+input[type="text"] {
+  width: 100%;
+  background: #000;
+  border: 1px solid #FF6600;
+  color: #FFF;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  outline: none;
+}
+input[type="text"]:focus { border-color: #00FFFF; }
+input[type="text"]::placeholder { color: #444; }
+
+.btn {
+  width: 100%;
+  background: #000;
+  border: 1px solid #FF6600;
+  color: #FF6600;
+  font-family: monospace;
+  font-size: 11px;
+  padding: 4px 8px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.1s;
+}
+.btn:hover { background: #FF6600; color: #000; }
+.btn.cyan { border-color: #00FFFF; color: #00FFFF; }
+.btn.cyan:hover { background: #00FFFF; color: #000; }
+
+/* AUTOCOMPLETE */
+#suggestions {
+  background: #0a0a0a;
+  border: 1px solid #FF6600;
+  border-top: none;
+  max-height: 120px;
+  overflow-y: auto;
+  display: none;
+}
+.suggestion-item {
+  padding: 3px 6px;
+  cursor: pointer;
+  color: #FF6600;
+  font-size: 11px;
+  border-bottom: 1px solid #111;
+}
+.suggestion-item:hover { background: #1a0a00; color: #00FFFF; }
+.suggestion-ticker { color: #444; font-size: 10px; margin-left: 4px; }
+
+/* WATCHLIST CARDS */
+.watch-card {
+  border: 1px solid #333;
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.watch-card:hover { border-color: #FF6600; }
+.watch-name { color: #00FFFF; font-size: 10px; }
+.watch-score { font-size: 13px; font-weight: bold; }
+
+/* RIGHT CONTENT */
+#content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* PANELS */
+.panel {
+  border: 1px solid #333;
+  background: #000;
+}
+.panel-header {
+  background: #0a0a0a;
+  border-bottom: 1px solid #333;
+  padding: 3px 8px;
+  color: #00FFFF;
+  font-size: 10px;
+  letter-spacing: 1px;
+  display: flex;
+  justify-content: space-between;
+}
+.panel-body { padding: 8px; }
+
+/* SCORE GRID */
+#score-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.score-cell {
+  border: 1px solid #333;
+  padding: 8px;
+  text-align: center;
+}
+.score-cell-label { color: #00FFFF; font-size: 9px; letter-spacing: 1px; margin-bottom: 4px; }
+.score-cell-value { font-size: 28px; font-weight: bold; line-height: 1; }
+.score-cell-sub { font-size: 10px; margin-top: 3px; }
+
+/* SCORE BARS */
+.bar-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+.bar-label { width: 160px; color: #00FFFF; flex-shrink: 0; }
+.bar-track { flex: 1; background: #111; height: 12px; position: relative; }
+.bar-fill { height: 100%; transition: width 0.6s ease; }
+.bar-value { width: 45px; text-align: right; color: #FFF; flex-shrink: 0; }
+
+/* COMPANY HEADER */
+#company-header {
+  border: 1px solid #FF6600;
+  padding: 8px;
+  display: none;
+}
+.company-name { color: #00FFFF; font-size: 16px; font-weight: bold; letter-spacing: 1px; }
+.company-meta { color: #FF6600; font-size: 10px; margin-top: 3px; }
+.company-meta a { color: #FF6600; }
+
+/* ALERT BOX */
+#alert-box {
+  border: 1px solid #FF0000;
+  background: #0a0000;
+  padding: 8px;
+  display: none;
+}
+.alert-title { color: #FF0000; font-size: 12px; margin-bottom: 4px; }
+.alert-headline { color: #FF0000; font-size: 10px; margin-bottom: 2px; }
+.alert-headline a { color: #FF4444; text-decoration: none; }
+
+/* GREENWASHING ALERT */
+#greenwash-box {
+  border: 1px solid #FFD600;
+  background: #0a0800;
+  padding: 8px;
+  display: none;
+}
+.gw-title { color: #FFD600; font-size: 12px; margin-bottom: 4px; font-weight: bold; }
+.gw-signal { color: #FFD600; font-size: 10px; margin-bottom: 2px; }
+
+/* DIVERGENCE ALERT */
+#divergence-box {
+  border: 1px solid #9C27B0;
+  background: #050005;
+  padding: 8px;
+  display: none;
+}
+.div-title { color: #9C27B0; font-size: 12px; margin-bottom: 4px; font-weight: bold; }
+.div-msg { color: #CE93D8; font-size: 11px; }
+
+/* SOURCE QUALITY BAR */
+.source-bar {
+  display: flex;
+  height: 6px;
+  margin-top: 4px;
+  border: 1px solid #222;
+  overflow: hidden;
+}
+.source-bar .t1 { background: #00FF00; }
+.source-bar .t2 { background: #FF6600; }
+.source-bar .t3 { background: #444; }
+
+/* ELI5 */
+#eli5-box { color: #FFF; font-size: 11px; line-height: 1.6; }
+
+/* DRIVERS */
+.driver-item { color: #FF6600; font-size: 11px; margin-bottom: 3px; }
+.improve-item { color: #00FF00; font-size: 11px; margin-bottom: 3px; }
+
+/* CHARTS ROW */
+#charts-row {
+  display: grid;
+  grid-template-columns: 1.15fr 1.15fr 0.9fr;
+  gap: 6px;
+  align-items: stretch;
+}
+
+#news-panel-inline {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+#news-panel-inline .panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#news-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  max-height: 380px;
+}
+
+.news-item {
+  border-bottom: 1px solid #111;
+  padding: 8px 0;
+}
+
+.news-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.news-source {
+  color: #666;
+  font-size: 10px;
+}
+
+.news-score {
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.news-title {
+  display: block;
+  color: #FFF;
+  font-size: 11px;
+  text-decoration: none;
+  line-height: 1.45;
+  margin-bottom: 6px;
+}
+
+.news-title:hover {
+  color: #00FFFF;
+}
+
+.news-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.news-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  border: 1px solid transparent;
+}
+
+.news-badge.pos {
+  color: #00FF88;
+  border-color: #00C853;
+  background: rgba(0, 200, 83, 0.08);
+}
+
+.news-badge.neg {
+  color: #FF5C5C;
+  border-color: #C62828;
+  background: rgba(198, 40, 40, 0.08);
+}
+
+.news-badge.neu {
+  color: #FFB74D;
+  border-color: #B8560A;
+  background: rgba(184, 86, 10, 0.08);
+}
+
+.news-time {
+  color: #666;
+  font-size: 9px;
+}
+
+@media (max-width: 1200px) {
+  #charts-row {
+    grid-template-columns: 1fr;
+  }
+
+  #news-panel-inline {
+    min-height: 300px;
+  }
+
+  #news-list {
+    max-height: 260px;
+  }
+
+  #score-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* STATUS */
+#status-bar {
+  border-top: 1px solid #333;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: #444;
+  display: flex;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+#status-msg { color: #FF6600; }
+
+/* NEWS TICKER */
+#ticker-bar {
+  border-top: 1px solid #FF6600;
+  background: #000;
+  padding: 3px 0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+#ticker-content {
+  display: inline-block;
+  white-space: nowrap;
+  animation: ticker 120s linear infinite;
+  color: #FF6600;
+  font-size: 10px;
+}
+@keyframes ticker {
+  from { transform: translateX(100vw); }
+  to   { transform: translateX(-100%); }
+}
+
+/* LOADING OVERLAY */
+#loader {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+}
+#loader.active { display: flex; }
+.loader-step { color: #FF6600; font-size: 12px; opacity: 0.4; transition: opacity 0.3s; }
+.loader-step.done { color: #00FF00; opacity: 1; }
+.loader-step.active { color: #00FFFF; opacity: 1; }
+
+/* TABS */
+.tab-content { display: none; }
+.tab-content.active { display: flex; flex-direction: column; gap: 6px; }
+
+/* PORTFOLIO TABLE */
+.port-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.port-table th { color: #00FFFF; border-bottom: 1px solid #333; padding: 4px 8px; text-align: left; }
+.port-table td { padding: 4px 8px; border-bottom: 1px solid #111; color: #FFF; }
+.port-table tr:hover td { background: #0a0a0a; }
+
+/* COMPARE */
+#compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #000; }
+::-webkit-scrollbar-thumb { background: #FF6600; }
+
+/* PLACEHOLDER */
+#placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #222;
+  gap: 8px;
+}
+#placeholder .big { font-size: 48px; color: #111; }
+#placeholder .sub { font-size: 12px; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">🌿 GREENLENS</div>
+  <div class="tagline">ESG RISK INTELLIGENCE TERMINAL</div>
+  <div class="clock" id="clock">--:--:--</div>
+</div>
+
+<div id="navtabs">
+  <div class="navtab active" onclick="switchTab('search', this)">[ SEARCH ]</div>
+  <div class="navtab" onclick="switchTab('portfolio', this)">[ PORTFOLIO ]</div>
+  <div class="navtab" onclick="switchTab('compare', this)">[ COMPARE ]</div>
+  <div class="navtab" onclick="switchTab('watchlist', this)">[ WATCHLIST ]</div>
+</div>
+
+<div id="main">
+
+  <div id="sidebar">
+
+    <div class="sidebar-section" id="sidebar-search">
+      <div class="sidebar-label">COMPANY SEARCH</div>
+      <input type="text" id="company-input" placeholder="e.g. Infosys"
+             oninput="onCompanyInput()" onkeydown="onKeyDown(event)">
+      <div id="suggestions"></div>
+      <button class="btn" onclick="runSearch()">▶ ANALYSE</button>
+    </div>
+
+    <div class="sidebar-section" id="sidebar-portfolio" style="display:none;">
+      <div class="sidebar-label">PORTFOLIO</div>
+      <textarea id="portfolio-input"
+        style="width:100%;background:#000;border:1px solid #FF6600;color:#FFF;
+               font-family:monospace;font-size:11px;padding:4px;resize:none;height:80px;outline:none;"
+        placeholder="INFY.NS 50, TCS.NS 30&#10;WIPRO.NS 20"></textarea>
+      <button class="btn" style="margin-top:4px;" onclick="runPortfolio()">▶ ANALYSE</button>
+      <div style="margin-top:6px; color:#444; font-size:10px;">OR UPLOAD CSV</div>
+      <input type="file" id="csv-upload" accept=".csv"
+             style="color:#FF6600;font-size:10px;margin-top:4px;">
+      <button class="btn cyan" style="margin-top:4px;" onclick="runCSV()">▶ FROM CSV</button>
+    </div>
+
+    <div class="sidebar-section" id="sidebar-compare" style="display:none;">
+      <div class="sidebar-label">COMPARE</div>
+      <input type="text" id="compare-a" placeholder="Company A">
+      <input type="text" id="compare-b" placeholder="Company B">
+      <button class="btn" onclick="runCompare()">▶ COMPARE</button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">WATCHLIST</div>
+      <div id="watchlist-cards">
+        <div style="color:#333;font-size:10px;">No companies saved.</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">RECENT</div>
+      <div id="recent-cards">
+        <div style="color:#333;font-size:10px;">No recent searches.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="content">
+
+    <div class="tab-content active" id="tab-search">
+      <div id="placeholder">
+        <div class="big">🌿</div>
+        <div class="sub">ENTER A COMPANY TO BEGIN ANALYSIS</div>
+        <div style="color:#111;font-size:10px;">POWERED BY FINBERT + YFINANCE</div>
+      </div>
+
+      <div id="results" style="display:none; flex-direction:column; gap:6px;">
+
+        <div id="company-header">
+          <div class="company-name" id="co-name">-</div>
+          <div class="company-meta" id="co-meta">-</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">ESG SCORECARD</div>
+          <div class="panel-body">
+            <div id="score-grid">
+              <div class="score-cell">
+                <div class="score-cell-label">ESG SCORE</div>
+                <div class="score-cell-value" id="sc-score">-</div>
+                <div class="score-cell-sub" id="sc-flag">-</div>
+              </div>
+              <div class="score-cell">
+                <div class="score-cell-label">PEER AVG</div>
+                <div class="score-cell-value" id="sc-delta">-</div>
+                <div class="score-cell-sub" id="sc-delta-sub">VS PEERS</div>
+              </div>
+              <div class="score-cell">
+                <div class="score-cell-label">CONFIDENCE</div>
+                <div class="score-cell-value" id="sc-conf" style="font-size:18px;">-</div>
+                <div class="score-cell-sub" id="sc-headlines">-</div>
+              </div>
+              <div class="score-cell" id="sc-gw-cell">
+                <div class="score-cell-label">GREENWASH</div>
+                <div class="score-cell-value" id="sc-gw" style="font-size:16px;">-</div>
+                <div class="score-cell-sub" id="sc-gw-sub">-</div>
+              </div>
+              <div class="score-cell">
+                <div class="score-cell-label">SECTOR RANK</div>
+                <div class="score-cell-value" id="sc-sector" style="font-size:16px;">-</div>
+                <div class="score-cell-sub" id="sc-sector-sub">-</div>
+              </div>
+              <div class="score-cell">
+                <div class="score-cell-label">TIMESTAMP</div>
+                <div class="score-cell-value" id="sc-time"
+                     style="font-size:11px;margin-top:8px;">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">SCORE BREAKDOWN</div>
+          <div class="panel-body" id="score-bars"></div>
+        </div>
+
+        <div id="alert-box">
+          <div class="alert-title">⚠ ACTIVE ALERT: <span id="alert-reason">-</span></div>
+          <div id="alert-headlines"></div>
+        </div>
+
+        <div id="greenwash-box">
+          <div class="gw-title">🌿 GREENWASHING DETECTED</div>
+          <div id="gw-signals"></div>
+        </div>
+
+        <div id="divergence-box">
+          <div class="div-title">⚡ SENTIMENT-FINANCIAL DIVERGENCE</div>
+          <div class="div-msg" id="div-message">-</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span>ANALYSIS</span>
+          </div>
+          <div class="panel-body" style="display:grid;grid-template-columns:1fr 1fr 0.6fr;gap:12px;">
+            <div>
+              <div style="color:#00FFFF;font-size:10px;margin-bottom:6px;">
+              WHAT DROVE THIS SCORE</div>
+              <div id="drivers"></div>
+            </div>
+            <div>
+              <div style="color:#00FFFF;font-size:10px;margin-bottom:6px;">
+              HOW TO IMPROVE</div>
+              <div id="improvements"></div>
+            </div>
+            <div>
+              <div style="color:#00FFFF;font-size:10px;margin-bottom:6px;">
+              SOURCE QUALITY</div>
+              <div id="source-quality"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">PLAIN ENGLISH SUMMARY</div>
+          <div class="panel-body" id="eli5-box">-</div>
+        </div>
+
+        <div id="charts-row">
+          <div class="panel">
+            <div class="panel-header">SENTIMENT TREND</div>
+            <div id="chart-sentiment" style="height:420px;"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">PEER COMPARISON</div>
+            <div id="chart-peers" style="height:420px;"></div>
+          </div>
+
+          <div class="panel" id="news-panel-inline">
+            <div class="panel-header">
+              <span>LIVE ESG NEWS FEED</span>
+              <span id="news-count" style="color:#666;font-size:10px;">0 STORIES</span>
+            </div>
+            <div id="news-list">
+              <div style="color:#333;font-size:11px;">Search a company to load live headlines.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span>STOCK PRICE - <span id="stock-chart-ticker">-</span></span>
+            <span style="display:flex;align-items:center;gap:2px;">
+              <button class="btn" style="width:auto;padding:2px 6px;font-size:9px;" onclick="toggleChartType()" id="chart-type-btn">CANDLE</button>
+              <span style="color:#333;margin:0 4px;">|</span>
+              <button class="btn stock-period-btn" style="width:auto;padding:2px 6px;font-size:9px;" onclick="switchPeriod('1d',this)">1D</button>
+              <button class="btn stock-period-btn" style="width:auto;padding:2px 6px;font-size:9px;" onclick="switchPeriod('5d',this)">5D</button>
+              <button class="btn stock-period-btn" style="width:auto;padding:2px 6px;font-size:9px;" onclick="switchPeriod('1mo',this)">1M</button>
+              <button class="btn stock-period-btn" style="width:auto;padding:2px 6px;font-size:9px;" onclick="switchPeriod('3mo',this)">3M</button>
+              <button class="btn stock-period-btn" style="width:auto;padding:2px 6px;font-size:9px;" onclick="switchPeriod('6mo',this)">6M</button>
+              <button class="btn stock-period-btn active-period" style="width:auto;padding:2px 6px;font-size:9px;border-color:#00FFFF;color:#00FFFF;" onclick="switchPeriod('1y',this)">1Y</button>
+              <button class="btn stock-period-btn" style="width:auto;padding:2px 6px;font-size:9px;" onclick="switchPeriod('3y',this)">3Y</button>
+              <button class="btn stock-period-btn" style="width:auto;padding:2px 6px;font-size:9px;" onclick="switchPeriod('5y',this)">5Y</button>
+              <button class="btn stock-period-btn" style="width:auto;padding:2px 6px;font-size:9px;" onclick="switchPeriod('max',this)">ALL</button>
+            </span>
+          </div>
+          <div style="overflow-x:auto;overflow-y:hidden;">
+            <div style="min-width:800px;">
+              <div id="chart-stock-price" style="height:300px;"></div>
+              <div id="chart-stock-volume" style="height:70px;"></div>
+            </div>
+          </div>
+          <div class="panel-body" id="momentum-signals" style="border-top:1px solid #333;padding:6px 8px;display:none;">
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">FINANCIAL SNAPSHOT</div>
+          <div class="panel-body" id="fin-snapshot"
+               style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">ESG SCORE DERIVATION</div>
+          <div class="panel-body" id="score-derivation"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">SECTOR CONTEXT</div>
+          <div class="panel-body" id="sector-context"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">ESG RIPPLE EFFECT - SECTOR NETWORK</div>
+          <div id="chart-bubble" style="height:380px;"></div>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="downloadPDF()">⬇ DOWNLOAD PDF</button>
+          <button class="btn cyan" onclick="addToWatchlist()">＋ WATCHLIST</button>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-portfolio">
+      <div id="portfolio-results">
+        <div id="placeholder-port" style="color:#222;text-align:center;padding:40px;">
+          ENTER HOLDINGS IN SIDEBAR TO BEGIN
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-compare">
+      <div id="compare-results">
+        <div style="color:#222;text-align:center;padding:40px;">
+          ENTER TWO COMPANIES IN SIDEBAR TO COMPARE
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-watchlist">
+      <div class="panel">
+        <div class="panel-header">SAVED COMPANIES</div>
+        <div class="panel-body" id="watchlist-grid"
+             style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          <div style="color:#333;font-size:11px;">No companies saved yet.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="status-bar">
+  <span id="status-msg">READY</span>
+  <span id="status-right">GREENLENS ESG TERMINAL</span>
+</div>
+
+<div id="ticker-bar">
+  <span id="ticker-content">● GREENLENS ESG TERMINAL - ENTER A COMPANY NAME TO BEGIN ANALYSIS</span>
+</div>
+
+<div id="loader">
+  <div id="loader-title" style="color:#00FFFF;font-size:14px;letter-spacing:2px;margin-bottom:12px;">
+  🌿 RUNNING ESG ANALYSIS
+</div>
+  <div class="loader-step" id="step1">① RESOLVING TICKER...</div>
+  <div class="loader-step" id="step2">② FETCHING NEWS HEADLINES...</div>
+  <div class="loader-step" id="step3">③ RUNNING FINBERT SENTIMENT...</div>
+  <div class="loader-step" id="step4">④ PULLING FINANCIAL DATA...</div>
+  <div class="loader-step" id="step5">⑤ SCORING E / S / G SIGNALS...</div>
+  <div class="loader-step" id="step6">⑥ ANALYSING SECTOR PEERS...</div>
+</div>
+
+<script>
+const COMPANIES = [
+  {name:"Infosys",          ticker:"INFY.NS"},
+  {name:"TCS",              ticker:"TCS.NS"},
+  {name:"Wipro",            ticker:"WIPRO.NS"},
+  {name:"HDFC Bank",        ticker:"HDFCBANK.NS"},
+  {name:"ICICI Bank",       ticker:"ICICIBANK.NS"},
+  {name:"Reliance",         ticker:"RELIANCE.NS"},
+  {name:"ONGC",             ticker:"ONGC.NS"},
+  {name:"Tata Motors",      ticker:"TATAMOTORS.NS"},
+  {name:"Maruti Suzuki",    ticker:"MARUTI.NS"},
+  {name:"Sun Pharma",       ticker:"SUNPHARMA.NS"},
+  {name:"Dr Reddy",         ticker:"DRREDDY.NS"},
+  {name:"HUL",              ticker:"HINDUNILVR.NS"},
+  {name:"ITC",              ticker:"ITC.NS"},
+  {name:"Apple",            ticker:"AAPL"},
+  {name:"Microsoft",        ticker:"MSFT"},
+  {name:"Google",           ticker:"GOOGL"},
+  {name:"Amazon",           ticker:"AMZN"},
+  {name:"Tesla",            ticker:"TSLA"},
+  {name:"Meta",             ticker:"META"},
+  {name:"Nvidia",           ticker:"NVDA"},
+  {name:"Samsung",          ticker:"005930.KS"},
+  {name:"Adani Enterprises",ticker:"ADANIENT.NS"},
+  {name:"Bajaj Finance",    ticker:"BAJFINANCE.NS"},
+  {name:"Asian Paints",     ticker:"ASIANPAINT.NS"},
+  {name:"Kotak Bank",       ticker:"KOTAKBANK.NS"},
+  {name:"Tata Steel",       ticker:"TATASTEEL.NS"},
+  {name:"MRF",              ticker:"MRF.NS"},
+  {name:"SBI",              ticker:"SBIN.NS"},
+  {name:"Zomato",           ticker:"ZOMATO.NS"},
+];
+
+let watchlist = JSON.parse(localStorage.getItem("gl_watchlist") || "[]");
+let recent = JSON.parse(localStorage.getItem("gl_recent") || "[]");
+let lastResult = null;
+let lastEli5 = null;
+let currentTicker = null;
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById("clock").textContent =
+    now.toTimeString().split(" ")[0] + " " +
+    now.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}).toUpperCase();
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+function switchTab(tab, el) {
+  document.querySelectorAll(".navtab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll("[id^='sidebar-']").forEach(t => t.style.display = "none");
+
+  if (el) el.classList.add("active");
+  document.getElementById("tab-" + tab).classList.add("active");
+
+  const s = document.getElementById("sidebar-" + tab);
+  if (s) s.style.display = "block";
+  document.getElementById("sidebar-search").style.display =
+    tab === "search" ? "block" : "none";
+}
+
+function onCompanyInput() {
+  const val = document.getElementById("company-input").value.toLowerCase();
+  const box = document.getElementById("suggestions");
+  if (!val) { box.style.display = "none"; return; }
+  const matches = COMPANIES.filter(c =>
+    c.name.toLowerCase().includes(val) || c.ticker.toLowerCase().includes(val)
+  ).slice(0, 6);
+  if (!matches.length) { box.style.display = "none"; return; }
+  box.innerHTML = matches.map(c =>
+    `<div class="suggestion-item" onclick="selectSuggestion('${c.name}','${c.ticker}')">
+      ${c.name} <span class="suggestion-ticker">${c.ticker}</span>
+    </div>`
+  ).join("");
+  box.style.display = "block";
+}
+
+function selectSuggestion(name, ticker) {
+  document.getElementById("company-input").value = name;
+  document.getElementById("suggestions").style.display = "none";
+  runSearch(name, ticker);
+}
+
+function onKeyDown(e) {
+  if (e.key === "Enter") {
+    document.getElementById("suggestions").style.display = "none";
+    runSearch();
+  }
+}
+
+function flagColour(flag) {
+  return {LOW:"#00FF00", MEDIUM:"#FF6600", HIGH:"#FF0000"}[flag] || "#FFF";
+}
+
+function setStatus(msg) {
+  document.getElementById("status-msg").textContent = msg;
+}
+
+function activateStep(n) {
+  for (let i = 1; i <= 6; i++) {
+    const el = document.getElementById("step" + i);
+    if (i < n)  { el.classList.add("done"); el.classList.remove("active"); }
+    if (i === n){ el.classList.add("active"); el.classList.remove("done"); }
+    if (i > n)  { el.classList.remove("done","active"); }
+  }
+}
+
+function showLoader() { document.getElementById("loader").classList.add("active"); }
+function hideLoader() { document.getElementById("loader").classList.remove("active"); }
+
+function configureSearchLoader() {
+  document.getElementById("loader-title").textContent = "🌿 RUNNING ESG ANALYSIS";
+  document.getElementById("step1").textContent = "① RESOLVING TICKER...";
+  document.getElementById("step2").textContent = "② FETCHING NEWS HEADLINES...";
+  document.getElementById("step3").textContent = "③ RUNNING FINBERT SENTIMENT...";
+  document.getElementById("step4").textContent = "④ PULLING FINANCIAL DATA...";
+  document.getElementById("step5").textContent = "⑤ SCORING E / S / G SIGNALS...";
+  document.getElementById("step6").textContent = "⑥ ANALYSING SECTOR PEERS...";
+}
+
+function configureCompareLoader(companyA, companyB) {
+  document.getElementById("loader-title").textContent =
+    `⚖ COMPARING ${companyA.toUpperCase()} vs ${companyB.toUpperCase()}`;
+  document.getElementById("step1").textContent = "① SCORING COMPANY A...";
+  document.getElementById("step2").textContent = "② RUNNING SENTIMENT ANALYSIS...";
+  document.getElementById("step3").textContent = "③ PULLING FINANCIAL + E/S/G DATA...";
+  document.getElementById("step4").textContent = "④ SCORING COMPANY B...";
+  document.getElementById("step5").textContent = "⑤ BUILDING HEAD TO HEAD VIEW...";
+  document.getElementById("step6").textContent = "⑥ FINALISING COMPARISON...";
+}
+function renderBar(label, score, colour) {
+  return `<div class="bar-row">
+    <div class="bar-label">${label}</div>
+    <div class="bar-track">
+      <div class="bar-fill" style="width:${score}%;background:${colour};"></div>
+    </div>
+    <div class="bar-value">${score.toFixed(1)}</div>
+  </div>`;
+}
+function buildCompareVerdict(r1, r2) {
+  const s1 = Number(r1.final_score || 0);
+  const s2 = Number(r2.final_score || 0);
+
+  if (s1 === s2) {
+    return "Both companies are currently matched on overall ESG score.";
+  }
+
+  const better = s1 > s2 ? r1 : r2;
+  const weaker = s1 > s2 ? r2 : r1;
+
+  const betterName = better.company_info?.name || better.company;
+  const weakerName = weaker.company_info?.name || weaker.company;
+
+  const reasons = [];
+
+  if (Number(better.sentiment_score || 0) > Number(weaker.sentiment_score || 0)) reasons.push("sentiment");
+  if (Number(better.financial_score || 0) > Number(weaker.financial_score || 0)) reasons.push("financial strength");
+  if (Number(better.momentum_score || 50) > Number(weaker.momentum_score || 50)) reasons.push("momentum");
+  if (Number(better.g_score || 0) > Number(weaker.g_score || 0)) reasons.push("governance");
+
+  const reasonText = reasons.length ? reasons.slice(0, 2).join(" and ") : "overall balance";
+
+  return `${betterName} leads ${weakerName} mainly on ${reasonText}.`;
+}
+
+function buildCompareCardTakeaway(r) {
+  const parts = [];
+
+  if (Number(r.sentiment_score || 0) >= 66) parts.push("strong sentiment");
+  else if (Number(r.sentiment_score || 0) <= 40) parts.push("weak sentiment");
+
+  if (Number(r.financial_score || 0) >= 66) parts.push("solid financials");
+  else if (Number(r.financial_score || 0) <= 40) parts.push("financial pressure");
+
+  if (r.momentum_trend === "BULLISH") parts.push("bullish momentum");
+  else if (r.momentum_trend === "BEARISH") parts.push("bearish momentum");
+
+  if (Number(r.g_score || 0) >= 66) parts.push("good governance");
+  else if (Number(r.g_score || 0) <= 40) parts.push("governance weakness");
+
+  if (!parts.length) return "Mixed profile with no single dominant strength.";
+  return parts[0].charAt(0).toUpperCase() + parts[0].slice(1) + (parts.length > 1 ? `, plus ${parts.slice(1, 3).join(" and ")}.` : ".");
+}
+async function runSearch(companyOverride, tickerOverride) {
+  const company = companyOverride || document.getElementById("company-input").value.trim();
+  if (!company) return;
+
+  configureSearchLoader();
+showLoader();
+setStatus("ANALYSING " + company.toUpperCase() + "...");
+  let step = 1;
+  activateStep(step);
+  const stepTimer = setInterval(() => {
+    step = Math.min(step + 1, 6);
+    activateStep(step);
+  }, 800);
+
+  try {
+    const res = await fetch("/api/score", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({company, ticker: tickerOverride || ""})
+    });
+    clearInterval(stepTimer);
+    hideLoader();
+
+    if (!res.ok) {
+      const err = await res.json();
+      setStatus("ERROR: " + err.error);
+      return;
+    }
+
+    const data = await res.json();
+    lastResult = data.result;
+    lastEli5 = data.eli5;
+
+    renderResults(data);
+    updateTicker(data.result.trend || []);
+    updateRecent(company, data.result);
+    setStatus("ANALYSIS COMPLETE - " + company.toUpperCase());
+
+  } catch(e) {
+    clearInterval(stepTimer);
+    hideLoader();
+    setStatus("ERROR: " + e.message);
+  }
+}
+
+function renderResults(data) {
+  const r = data.result;
+  const fc = flagColour(r.flag);
+  const info = r.company_info || {};
+
+  // show results, hide placeholder
+  document.getElementById("placeholder").style.display = "none";
+  const results = document.getElementById("results");
+  results.style.display = "flex";
+
+  // company header
+  const hdr = document.getElementById("company-header");
+  hdr.style.display = "block";
+  hdr.style.borderColor = fc;
+
+  document.getElementById("co-name").textContent =
+    (info.name || r.company).toUpperCase() + "  [" + r.ticker + "]";
+
+  const website = !isMissingValue(info.website) ? info.website : "#";
+  const websiteLabel = !isMissingValue(info.website) ? info.website : "Data unavailable";
+
+  document.getElementById("co-meta").innerHTML =
+    `SECTOR: ${displayValue(info.sector)}  |  COUNTRY: ${displayValue(info.country)}  |
+     EMPLOYEES: ${displayValue(info.employees)}  |
+     <a href="${website}" target="_blank">${websiteLabel}</a>`;
+
+  
+
+  document.getElementById("sc-score").textContent = r.final_score;
+  document.getElementById("sc-score").style.color = fc;
+  document.getElementById("sc-flag").textContent = r.flag + " RISK";
+  document.getElementById("sc-flag").style.color = fc;
+
+  const peerAvg = data.peers?.length
+    ? (data.peers.reduce((a,p) => a+p.score, 0) / data.peers.length).toFixed(1)
+    : "—";
+  const vsAvg = data.peers?.length ? r.final_score - parseFloat(peerAvg) : 0;
+  const vsCol = vsAvg >= 0 ? "#00C853" : "#C62828";
+  const vsArrow = vsAvg >= 0 ? "▲" : "▼";
+  document.getElementById("sc-delta").innerHTML =
+    `<span style="color:${vsCol}">${vsArrow} ${Math.abs(vsAvg).toFixed(1)}</span>`;
+  document.getElementById("sc-delta-sub").textContent = `PEER AVG: ${peerAvg}`;
+
+  document.getElementById("sc-conf").textContent = r.confidence;
+  document.getElementById("sc-headlines").textContent = r.headline_count + " HEADLINES";
+  document.getElementById("sc-time").textContent = r.timestamp;
+
+  const gw = r.greenwashing || {};
+  const gwLevel = gw.level || "NONE";
+  const gwCell = document.getElementById("sc-gw-cell");
+  const gwColors = {NONE:"#00FF00", MILD:"#FFD600", STRONG:"#FF0000"};
+  document.getElementById("sc-gw").textContent = gwLevel;
+  document.getElementById("sc-gw").style.color = gwColors[gwLevel] || "#FFF";
+  if (gwLevel === "NONE") {
+    document.getElementById("sc-gw-sub").textContent = "CLEAN";
+    document.getElementById("sc-gw-sub").style.color = "#00FF00";
+    gwCell.style.borderColor = "#333";
+  } else {
+    document.getElementById("sc-gw-sub").textContent =
+      gw.score_penalty ? `−${gw.score_penalty} PENALTY` : "FLAGGED";
+    document.getElementById("sc-gw-sub").style.color = gwColors[gwLevel];
+    gwCell.style.borderColor = gwColors[gwLevel];
+  }
+
+  const sa = r.sector_analysis || {};
+  document.getElementById("sc-sector").textContent = sa.percentile_label || "—";
+  document.getElementById("sc-sector").style.color =
+    (sa.vs_sector || 0) >= 0 ? "#00FF00" : "#FF6600";
+  document.getElementById("sc-sector-sub").textContent =
+    sa.vs_sector !== undefined ? `${sa.vs_sector >= 0 ? "+" : ""}${sa.vs_sector} VS BENCHMARK` : "—";
+
+  const momColor = (r.momentum_trend === "BULLISH") ? "#00FF00" :
+                   (r.momentum_trend === "BEARISH") ? "#FF0000" : "#FF6600";
+  document.getElementById("score-bars").innerHTML =
+    renderBar("SENTIMENT (NEWS)",   r.sentiment_score, fc) +
+    renderBar("FINANCIAL HEALTH",   r.financial_score, "#FF6600") +
+    renderBar("STOCK MOMENTUM",     r.momentum_score || 50, momColor) +
+    renderBar("ENVIRONMENTAL (E)",  r.e_score, "#00FF00") +
+    renderBar("SOCIAL (S)",         r.s_score, "#00FFFF") +
+    renderBar("GOVERNANCE (G)",     r.g_score, "#FFFF00");
+
+  const alertBox = document.getElementById("alert-box");
+  if (r.alert) {
+    alertBox.style.display = "block";
+    document.getElementById("alert-reason").textContent = r.alert_reason;
+    const negHeadlines = (r.trend||[]).filter(h => h.label==="negative");
+    document.getElementById("alert-headlines").innerHTML =
+      negHeadlines.map(h =>
+        `<div class="alert-headline">▼ <a href="${h.link}" target="_blank">${h.title}</a></div>`
+      ).join("");
+  } else {
+    alertBox.style.display = "none";
+  }
+
+  const gwBox = document.getElementById("greenwash-box");
+  if (gw.flag && gw.signals && gw.signals.length > 0) {
+    gwBox.style.display = "block";
+    document.getElementById("gw-signals").innerHTML =
+      gw.signals.map(s => `<div class="gw-signal">⚠ ${s}</div>`).join("");
+  } else {
+    gwBox.style.display = "none";
+  }
+
+  const div = r.divergence || {};
+  const divBox = document.getElementById("divergence-box");
+  if (div.flag) {
+    divBox.style.display = "block";
+    const typeLabel = div.type === "HYPE_RISK"
+      ? "📈 HYPE RISK" : "💎 HIDDEN VALUE";
+    document.querySelector(".div-title").textContent = `⚡ ${typeLabel}`;
+    document.getElementById("div-message").textContent = div.message || "";
+    divBox.style.borderColor = div.type === "HYPE_RISK" ? "#FF6600" : "#00BCD4";
+    document.querySelector(".div-title").style.color =
+      div.type === "HYPE_RISK" ? "#FF6600" : "#00BCD4";
+    document.getElementById("div-message").style.color =
+      div.type === "HYPE_RISK" ? "#FFB74D" : "#80DEEA";
+  } else {
+    divBox.style.display = "none";
+  }
+
+  document.getElementById("drivers").innerHTML =
+    (r.drivers||[]).map(d => `<div class="driver-item">◆ ${d}</div>`).join("");
+
+  document.getElementById("improvements").innerHTML =
+    (data.improvements||[]).map(i => `<div class="improve-item">→ ${i}</div>`).join("");
+
+  const sq = r.source_quality || {};
+  const sqTotal = sq.total || 0;
+  const sqEl = document.getElementById("source-quality");
+  if (sqTotal > 0) {
+    const t1pct = Math.round((sq.tier_1 / sqTotal) * 100);
+    const t2pct = Math.round((sq.tier_2 / sqTotal) * 100);
+    const t3pct = 100 - t1pct - t2pct;
+    sqEl.innerHTML = `
+      <div style="font-size:10px;color:#888;margin-bottom:4px;">
+        ${sqTotal} sources analysed
+      </div>
+      <div class="source-bar">
+        <div class="t1" style="width:${t1pct}%" title="Tier 1"></div>
+        <div class="t2" style="width:${t2pct}%" title="Tier 2"></div>
+        <div class="t3" style="width:${t3pct}%" title="Tier 3"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px;font-size:9px;">
+        <span style="color:#00FF00;">■ TIER 1: ${sq.tier_1}</span>
+        <span style="color:#FF6600;">■ TIER 2: ${sq.tier_2}</span>
+        <span style="color:#444;">■ TIER 3: ${sq.tier_3}</span>
+      </div>
+      <div style="color:#555;font-size:9px;margin-top:4px;">
+        T1: Reuters, Bloomberg, ET<br>
+        T2: Business Today, Yahoo<br>
+        T3: Blogs, Unknown
+      </div>`;
+  } else {
+    sqEl.innerHTML = `<div style="color:#333;font-size:10px;">No sources</div>`;
+  }
+
+  document.getElementById("eli5-box").textContent = data.eli5 || "—";
+  renderFinSnapshot(r.fin_formatted);
+  renderScoreDerivation(r);
+  renderSectorContext(r, data.peers || []);
+  updateHistory(r.ticker, r.final_score, r.flag);
+
+  const momPanel = document.getElementById("momentum-signals");
+  if (r.momentum_signals && r.momentum_signals.length > 0) {
+    momPanel.style.display = "block";
+    const trendCol = r.momentum_trend === "BULLISH" ? "#00FF00" :
+                     r.momentum_trend === "BEARISH" ? "#FF0000" : "#FF6600";
+    momPanel.innerHTML =
+      `<span style="color:${trendCol};font-size:11px;font-weight:bold;">
+        ${r.momentum_trend} (${(r.momentum_score||50).toFixed(1)})
+      </span> - ` +
+      r.momentum_signals.map(s =>
+        `<span style="color:#888;font-size:10px;margin-left:6px;">● ${s}</span>`
+      ).join("");
+  } else {
+    momPanel.style.display = "none";
+  }
+
+  renderSentimentChart(r.trend || []);
+  renderPeerChart(r.company, r.final_score, data.peers || []);
+  renderBubbleChart(r.company, r.final_score, r.flag, data.peers || []);
+  renderNewsPanel(r.trend || []);
+
+  currentTicker = r.ticker;
+  document.getElementById("stock-chart-ticker").textContent = r.ticker;
+  loadStockChart("1y");
+}
+
+function renderSentimentChart(trend) {
+  if (!trend || !trend.length) {
+    renderEmptyPlot("chart-sentiment", "No sentiment data available", 420);
+    return;
+  }
+
+  const pos = trend.filter(h => h.label === "positive").length;
+  const neg = trend.filter(h => h.label === "negative").length;
+  const neu = trend.filter(h => h.label === "neutral").length;
+
+  const buckets = [];
+  for (let i = 0; i < trend.length; i += 5) {
+    const chunk = trend.slice(i, i + 5);
+    if (!chunk.length) continue;
+    const score = chunk.reduce((a, h) =>
+      a + (h.label === "positive" ? 100 : h.label === "neutral" ? 50 : 0), 0
+    ) / chunk.length;
+    buckets.push(score);
+  }
+
+  if (!buckets.length) {
+    renderEmptyPlot("chart-sentiment", "No sentiment buckets could be generated", 420);
+    return;
+  }
+
+  const colours = buckets.map(s => s >= 66 ? "#00C853" : s >= 41 ? "#B8560A" : "#C62828");
+
+  Plotly.newPlot("chart-sentiment", [{
+    type: "bar",
+    x: buckets.map((_, i) => `Batch ${i + 1}`),
+    y: buckets,
+    marker: { color: colours, opacity: 0.85 },
+    hovertemplate: "Sentiment Score: %{y:.1f}<extra></extra>",
+  }], {
+    paper_bgcolor: "#000",
+    plot_bgcolor: "#000",
+    font: { family: "Courier New", color: "#0097A7", size: 10 },
+    margin: { l: 35, r: 10, t: 10, b: 30 },
+    xaxis: { showgrid: false, color: "#444" },
+    yaxis: { showgrid: true, gridcolor: "#111", range: [0, 110], color: "#0097A7" },
+    shapes: [
+      { type: "line", x0: 0, x1: buckets.length, y0: 66, y1: 66, line: { color: "#00C853", width: 1, dash: "dot" } },
+      { type: "line", x0: 0, x1: buckets.length, y0: 40, y1: 40, line: { color: "#C62828", width: 1, dash: "dot" } },
+    ],
+    annotations: [{
+      x: 0.5, y: 1.08, xref: "paper", yref: "paper",
+      text: `${pos} positive · ${neu} neutral · ${neg} negative`,
+      showarrow: false, font: { size: 9, color: "#8B949E" },
+    }],
+  }, { responsive: true, displayModeBar: false });
+}
+
+function renderPeerChart(company, score, peers) {
+  if (!peers || !peers.length) {
+    renderEmptyPlot("chart-peers", "Peer comparison unavailable", 420);
+    return;
+  }
+
+  const names = [company, ...peers.map(p => (p.company_info?.name || p.ticker).substring(0, 12))];
+  const scores = [score, ...peers.map(p => p.score)];
+  const flags = [(score >= 66 ? "LOW" : score >= 41 ? "MEDIUM" : "HIGH"), ...peers.map(p => p.flag)];
+  const colours = flags.map(f => f === "LOW" ? "#00C853" : f === "MEDIUM" ? "#B8560A" : "#C62828");
+
+  Plotly.newPlot("chart-peers", [{
+    type: "bar",
+    x: names,
+    y: scores,
+    marker: { color: colours, opacity: 0.85 },
+    text: scores.map(s => Number(s).toFixed(1)),
+    textposition: "outside",
+    textfont: { color: "#FFF", size: 10 },
+    hovertemplate: "%{x}<br>ESG Score: %{y:.1f}<extra></extra>",
+  }], {
+    paper_bgcolor: "#000",
+    plot_bgcolor: "#000",
+    font: { family: "Courier New", color: "#0097A7", size: 10 },
+    margin: { l: 35, r: 10, t: 20, b: 50 },
+    xaxis: { showgrid: false, color: "#555", tickangle: -20 },
+    yaxis: { showgrid: true, gridcolor: "#111", range: [0, 120], color: "#0097A7" },
+    shapes: [
+      { type: "line", x0: -0.5, x1: names.length - 0.5, y0: 66, y1: 66, line: { color: "#00C853", width: 1, dash: "dot" } },
+      { type: "line", x0: -0.5, x1: names.length - 0.5, y0: 40, y1: 40, line: { color: "#C62828", width: 1, dash: "dot" } },
+    ],
+  }, { responsive: true, displayModeBar: false });
+}
+
+let chartType = "line";
+let currentPeriod = "1y";
+let lastChartData = null;
+
+function toggleChartType() {
+  chartType = chartType === "line" ? "candle" : "line";
+  document.getElementById("chart-type-btn").textContent =
+    chartType === "line" ? "CANDLE" : "LINE";
+  if (lastChartData) renderStockChart(lastChartData, currentPeriod);
+}
+
+function switchPeriod(period, btn) {
+  document.querySelectorAll(".stock-period-btn").forEach(b => {
+    b.style.borderColor = "#FF6600";
+    b.style.color = "#FF6600";
+    b.classList.remove("active-period");
+  });
+  if (btn) {
+    btn.style.borderColor = "#00FFFF";
+    btn.style.color = "#00FFFF";
+    btn.classList.add("active-period");
+  }
+  loadStockChart(period);
+}
+function renderStockUnavailable(message = "Stock chart unavailable") {
+  renderEmptyPlot("chart-stock-price", message, 300);
+  renderEmptyPlot("chart-stock-volume", "No volume data", 70);
+}
+
+async function loadStockChart(period) {
+  if (!currentTicker) {
+    renderStockUnavailable("No ticker selected");
+    return;
+  }
+
+  currentPeriod = period;
+
+  try {
+    const res = await fetch(`/api/stock_chart?ticker=${currentTicker}&period=${period}`);
+    const data = await res.json();
+
+    if (data.error) {
+      renderStockUnavailable("Price data unavailable");
+      return;
+    }
+
+    if (!data.dates || !data.close || !data.dates.length || !data.close.length) {
+      renderStockUnavailable("Price data unavailable");
+      return;
+    }
+
+    lastChartData = data;
+    renderStockChart(data, period);
+  } catch (e) {
+    console.error("Stock chart error:", e);
+    renderStockUnavailable("Stock chart unavailable");
+  }
+}
+
+function renderStockChart(data, period) {
+  const currency = data.currency === "INR" ? "₹" : "$";
+  const lastClose = data.close[data.close.length - 1];
+  const firstClose = data.close[0];
+  const change = ((lastClose - firstClose) / firstClose * 100).toFixed(2);
+  const isUp = change >= 0;
+  const lineColor = isUp ? "#00C853" : "#FF1744";
+  const fillColor = isUp ? "rgba(0,200,83,0.06)" : "rgba(255,23,68,0.06)";
+
+  document.getElementById("stock-chart-ticker").innerHTML =
+    `${currentTicker} <span style="color:${lineColor}">${isUp ? "+" : ""}${change}%</span>`;
+
+  const traces = [];
+
+  if (chartType === "candle") {
+    traces.push({
+      type: "candlestick",
+      x: data.dates,
+      open: data.open, high: data.high, low: data.low, close: data.close,
+      increasing: {line: {color: "#00C853", width: 1}, fillcolor: "rgba(0,200,83,0.7)"},
+      decreasing: {line: {color: "#FF1744", width: 1}, fillcolor: "rgba(255,23,68,0.7)"},
+      name: "Price",
+      whiskerwidth: 0.5,
+    });
+  } else {
+    traces.push({
+      type: "scatter", mode: "lines",
+      x: data.dates, y: data.close,
+      line: {color: lineColor, width: 1.5, shape: "spline"},
+      fill: "tozeroy",
+      fillcolor: fillColor,
+      name: "Price",
+      hovertemplate: `${currency}%{y:.2f}<extra></extra>`,
+    });
+  }
+
+  function addSMA(smaData, name, color, showOn) {
+    if (!smaData || !showOn.includes(period)) return;
+    const filteredDates = [];
+    const filteredVals = [];
+    for (let i = 0; i < smaData.length; i++) {
+      if (smaData[i] !== null) {
+        filteredDates.push(data.dates[i]);
+        filteredVals.push(smaData[i]);
+      }
+    }
+    if (filteredVals.length < 2) return;
+    traces.push({
+      type: "scatter", mode: "lines",
+      x: filteredDates, y: filteredVals,
+      line: {color: color, width: 1.2},
+      opacity: 0.6,
+      name: name,
+      hoverinfo: "skip",
+    });
+  }
+
+  addSMA(data.sma20,  "SMA 20",  "#FF6600", ["1d","5d","1mo","3mo","6mo"]);
+  addSMA(data.sma50,  "SMA 50",  "#00FFFF", ["1mo","3mo","6mo","1y","3y","5y","max"]);
+  addSMA(data.sma200, "SMA 200", "#9C27B0", ["1y","3y","5y","max"]);
+
+  const shapes = [];
+  if (data.day_boundaries && data.day_boundaries.length > 0) {
+    data.day_boundaries.forEach(dt => {
+      shapes.push({
+        type: "line", xref: "x", yref: "paper",
+        x0: dt, x1: dt, y0: 0, y1: 1,
+        line: {color: "#222", width: 1, dash: "dot"},
+      });
+    });
+  }
+
+  Plotly.newPlot("chart-stock-price", traces, {
+    paper_bgcolor: "#000", plot_bgcolor: "#000",
+    font: {family: "Courier New", color: "#444", size: 9},
+    margin: {l: 10, r: 55, t: 8, b: 5},
+    shapes: shapes,
+    xaxis: {
+      showgrid: false, color: "#222",
+      rangeslider: {visible: false},
+      showticklabels: false,
+    },
+    yaxis: {
+      showgrid: true, gridcolor: "#0d0d0d",
+      color: "#444", side: "right",
+      tickprefix: currency,
+      tickfont: {size: 9, color: "#444"},
+    },
+    legend: {
+      orientation: "h", x: 0, y: 1.02,
+      font: {size: 8, color: "#444"},
+      bgcolor: "transparent",
+    },
+    hovermode: "x unified",
+    hoverlabel: {bgcolor: "#0a0a0a", bordercolor: "#1a1a1a",
+                 font: {color: "#CCC", size: 10, family: "Courier New"}},
+  }, {responsive: true, displayModeBar: false});
+
+  const volColors = data.close.map((c, i) =>
+    i === 0 ? "#0d0d0d" : (c >= data.close[i-1] ? "rgba(0,200,83,0.25)" : "rgba(255,23,68,0.25)")
+  );
+
+  Plotly.newPlot("chart-stock-volume", [{
+    type: "bar",
+    x: data.dates, y: data.volume,
+    marker: {color: volColors},
+    hovertemplate: "Vol: %{y:,.0f}<extra></extra>",
+  }], {
+    paper_bgcolor: "#000", plot_bgcolor: "#000",
+    font: {family: "Courier New", color: "#222", size: 8},
+    margin: {l: 10, r: 55, t: 0, b: 22},
+    xaxis: {showgrid: false, color: "#222",
+            tickfont: {size: 8, color: "#333"}},
+    yaxis: {showgrid: false, showticklabels: false},
+    bargap: 0.4,
+  }, {responsive: true, displayModeBar: false});
+}
+
+function renderBubbleChart(company, score, flag, peers) {
+  const traces = [];
+  const fc = flagColour(flag);
+  const n = peers.length;
+
+  [1.8, 3.2].forEach(r => {
+    const pts = 60;
+    const xs = [], ys = [];
+    for (let i = 0; i <= pts; i++) {
+      xs.push(r * Math.cos(2*Math.PI*i/pts));
+      ys.push(r * Math.sin(2*Math.PI*i/pts));
+    }
+    traces.push({
+      type:"scatter", x:xs, y:ys, mode:"lines",
+      line:{color:"#111", width:1, dash:"dot"},
+      hoverinfo:"skip", showlegend:false,
+    });
+  });
+
+  peers.forEach((p, i) => {
+    const angle = (2*Math.PI*i)/Math.max(n,1) - Math.PI/2;
+    const px = 3.2*Math.cos(angle), py = 3.2*Math.sin(angle);
+    const pc = flagColour(p.flag);
+    traces.push({
+      type:"scatter", x:[0, px], y:[0, py], mode:"lines",
+      line:{color:pc, width:1.5},
+      hoverinfo:"skip", showlegend:false,
+      opacity:0.3,
+    });
+  });
+
+  traces.push({
+    type:"scatter", x:[0], y:[0], mode:"markers+text",
+    marker:{
+      size: Math.max(score * 1.0, 60),
+      color: fc,
+      opacity: 0.9,
+      line:{color:"#FFFFFF", width:3},
+    },
+    text:[`${company.substring(0,10)}\n${score}`],
+    textposition:"middle center",
+    textfont:{color:"#000000", size:10, family:"Courier New"},
+    hovertemplate:`<b>${company}</b><br>Score: ${score}<br>${flag}<extra></extra>`,
+    showlegend:false,
+  });
+
+  peers.forEach((p, i) => {
+    const angle = (2*Math.PI*i)/Math.max(n,1) - Math.PI/2;
+    const px = 3.2*Math.cos(angle), py = 3.2*Math.sin(angle);
+    const pc = flagColour(p.flag);
+    const name = (p.company_info?.name || p.ticker).substring(0,14);
+
+    traces.push({
+      type:"scatter", x:[px], y:[py], mode:"markers+text",
+      marker:{
+        size: Math.max(p.score * 0.75, 35),
+        color: pc,
+        opacity: 0.85,
+        line:{color:pc, width:2},
+      },
+      text:[`${name.substring(0,10)}\n${p.score}`],
+      textposition:"middle center",
+      textfont:{color:"#000000", size:9, family:"Courier New"},
+      hovertemplate:`<b>${name}</b><br>Score: ${p.score}<br>${p.flag}<extra></extra>`,
+      showlegend:false,
+    });
+  });
+
+  const annotations = [
+    {x:3.8, y:3.8, text:"● LOW", showarrow:false,
+     font:{color:"#00FF00", size:9, family:"Courier New"}},
+    {x:3.8, y:3.4, text:"● MED", showarrow:false,
+     font:{color:"#FF6600", size:9, family:"Courier New"}},
+    {x:3.8, y:3.0, text:"● HIGH", showarrow:false,
+     font:{color:"#FF0000", size:9, family:"Courier New"}},
+  ];
+
+  Plotly.newPlot("chart-bubble", traces, {
+    paper_bgcolor:"#000000",
+    plot_bgcolor:"#000000",
+    font:{family:"Courier New", color:"#FF6600"},
+    margin:{l:20, r:20, t:20, b:20},
+    showlegend:false,
+    annotations,
+    xaxis:{showgrid:false, zeroline:false, showticklabels:false, range:[-5,5]},
+    yaxis:{showgrid:false, zeroline:false, showticklabels:false, range:[-5,5],
+           scaleanchor:"x", scaleratio:1},
+  }, {responsive:true, displayModeBar:false});
+}
+
+async function runPortfolio() {
+  const input = document.getElementById("portfolio-input").value.trim();
+  if (!input) return;
+
+  const holdings = [];
+  const parts = input.replace(/;/g,",").split(",");
+  let i = 0;
+  while (i < parts.length) {
+    const part = parts[i].trim();
+    if (part.includes(" ")) {
+      const bits = part.split(/\s+/);
+      if (bits.length >= 2) holdings.push({ticker:bits[0].toUpperCase(), quantity:parseInt(bits[1])||1});
+    } else {
+      if (i+1 < parts.length) {
+        const qty = parseInt(parts[i+1].trim());
+        if (!isNaN(qty)) { holdings.push({ticker:part.toUpperCase(), quantity:qty}); i++; }
+        else holdings.push({ticker:part.toUpperCase(), quantity:1});
+      } else {
+        holdings.push({ticker:part.toUpperCase(), quantity:1});
+      }
+    }
+    i++;
+  }
+
+  await scorePortfolio(holdings);
+}
+
+async function runCSV() {
+  const file = document.getElementById("csv-upload").files[0];
+  if (!file) return;
+  const text = await file.text();
+  const lines = text.trim().split("\n").slice(1);
+  const holdings = lines.map(l => {
+    const [ticker, qty] = l.split(",");
+    return {ticker: ticker?.trim().toUpperCase(), quantity: parseInt(qty?.trim())||1};
+  }).filter(h => h.ticker);
+  await scorePortfolio(holdings);
+}
+
+async function scorePortfolio(holdings) {
+  setStatus("SCORING PORTFOLIO...");
+  switchTabDirect("portfolio");
+  document.getElementById("portfolio-results").innerHTML = `
+    <div class="panel">
+      <div class="panel-body" style="text-align:center;padding:40px;">
+        <div style="color:#0097A7;font-size:13px;margin-bottom:16px;">
+          SCORING PORTFOLIO - THIS MAY TAKE 30-60 SECONDS
+        </div>
+        <div style="color:#B8560A;font-size:11px;animation:blink 1s infinite;">
+          ● RUNNING FINBERT ON EACH HOLDING...
+        </div>
+      </div>
+    </div>`;
+
+  try {
+    const res = await fetch("/api/portfolio", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({holdings})
+    });
+    const port = await res.json();
+    if (port.error) { setStatus("ERROR: " + port.error); return; }
+
+    const fc = flagColour(port.flag);
+    document.getElementById("portfolio-results").innerHTML = `
+      <div class="panel">
+        <div class="panel-header">PORTFOLIO ESG SCORE</div>
+        <div class="panel-body">
+          <div style="text-align:center;margin-bottom:12px;">
+            <span style="color:#00FFFF;font-size:13px;">WEIGHTED SCORE: </span>
+            <span style="color:${fc};font-size:32px;font-weight:bold;">
+            ${port.weighted_score}</span>
+            <span style="color:${fc};font-size:13px;"> - ${port.flag} RISK</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <div id="chart-portfolio" style="height:220px;"></div>
+            </div>
+            <div>
+              <div style="color:#00FFFF;font-size:10px;margin-bottom:6px;">
+              HOLDINGS BREAKDOWN</div>
+              <table class="port-table">
+                <tr><th>TICKER</th><th>SCORE</th><th>FLAG</th><th>WEIGHT</th><th>ALERT</th></tr>
+                ${port.breakdown.map(b => `
+                  <tr>
+                    <td style="color:${b.ticker===port.riskiest?'#FF0000':'#00FFFF'}">
+                      ${b.ticker}${b.ticker===port.riskiest?' ◀':''}
+                    </td>
+                    <td style="color:${flagColour(b.flag)}">${b.score.toFixed(1)}</td>
+                    <td style="color:${flagColour(b.flag)}">${b.flag}</td>
+                    <td style="color:#FF6600">${b['weight_%']}%</td>
+                    <td style="color:#FF0000">${b.alert?'⚠':''}</td>
+                  </tr>`).join("")}
+              </table>
+            </div>
+          </div>
+          ${port.recommendations?.length ? `
+          <div style="margin-top:10px;">
+            <div style="color:#00FFFF;font-size:10px;margin-bottom:4px;">RECOMMENDATIONS</div>
+            ${port.recommendations.map(r=>
+              `<div style="color:#FF6600;font-size:11px;">→ ${r}</div>`
+            ).join("")}
+          </div>` : ""}
+        </div>
+      </div>`;
+
+    Plotly.newPlot("chart-portfolio",
+      [{type:"pie",
+        labels:port.breakdown.map(b=>b.ticker),
+        values:port.breakdown.map(b=>b['weight_%']),
+        marker:{colors:port.breakdown.map(b=>flagColour(b.flag)),
+                line:{color:"#000",width:2}},
+        textfont:{color:"#000",size:11},
+        hovertemplate:"%{label}<br>%{value}%<extra></extra>",
+      }],
+      {paper_bgcolor:"#000",
+       font:{family:"Courier New",color:"#FF6600",size:10},
+       margin:{l:10,r:10,t:10,b:10},
+       showlegend:true,
+       legend:{font:{color:"#FF6600",size:9}},
+      },
+      {responsive:true, displayModeBar:false}
+    );
+
+    setStatus("PORTFOLIO ANALYSIS COMPLETE");
+  } catch(e) {
+    setStatus("ERROR: " + e.message);
+  }
+}
+
+async function runCompare() {
+  const co1 = document.getElementById("compare-a").value.trim();
+  const co2 = document.getElementById("compare-b").value.trim();
+  if (!co1 || !co2) return;
+
+  configureCompareLoader(co1, co2);
+  showLoader();
+  setStatus("COMPARING " + co1.toUpperCase() + " vs " + co2.toUpperCase() + "...");
+  switchTabDirect("compare");
+
+  let step = 1;
+  activateStep(step);
+  const stepTimer = setInterval(() => {
+    step = Math.min(step + 1, 6);
+    activateStep(step);
+  }, 850);
+
+  try {
+    const res = await fetch("/api/compare", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ company1: co1, company2: co2 })
+    });
+
+    const data = await res.json();
+    clearInterval(stepTimer);
+    hideLoader();
+
+    if (data.error) {
+      setStatus("ERROR: " + data.error);
+      return;
+    }
+
+    const r1 = data.company1;
+    const r2 = data.company2;
+
+    const score1 = Number(r1.final_score || 0);
+    const score2 = Number(r2.final_score || 0);
+    const diff = Math.abs(score1 - score2).toFixed(2);
+
+    const winner = score1 === score2 ? null : (score1 > score2 ? r1 : r2);
+    const verdict = buildCompareVerdict(r1, r2);
+
+    document.getElementById("compare-results").innerHTML = `
+      <div class="panel">
+        <div class="panel-header">COMPARE SUMMARY</div>
+        <div class="panel-body" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="color:#FFF;font-size:12px;">
+            <span style="color:#00FFFF;">SCORE GAP:</span>
+            <span style="color:#FFFFFF;font-weight:bold;">${diff}</span>
+          </div>
+          <div style="color:${winner ? flagColour(winner.flag) : "#FF6600"};font-size:12px;font-weight:bold;">
+            ${winner ? `WINNER: ${(winner.company_info?.name || winner.company).toUpperCase()}` : "RESULT: TIE"}
+          </div>
+          <div style="color:#888;font-size:11px;">
+            ${verdict}
+          </div>
+        </div>
+      </div>
+
+      <div id="compare-grid">
+        ${[r1, r2].map((r) => {
+          const fc = flagColour(r.flag);
+          const isWinner = winner && winner.ticker === r.ticker;
+          const companyName = (r.company_info?.name || r.company).toUpperCase();
+          const momentumColor =
+            r.momentum_trend === "BULLISH" ? "#00FF00" :
+            r.momentum_trend === "BEARISH" ? "#FF0000" : "#FF6600";
+
+          return `
+            <div class="panel" style="border-color:${isWinner ? fc : "#333"};">
+              <div class="panel-header" style="color:${fc};display:flex;justify-content:space-between;align-items:center;">
+                <span>${companyName} [${r.ticker}]</span>
+                ${isWinner ? `<span style="color:#000;background:${fc};padding:1px 6px;font-size:9px;font-weight:bold;">WINNER</span>` : ""}
+              </div>
+              <div class="panel-body">
+                <div style="text-align:center;margin-bottom:10px;">
+                  <div style="color:${fc};font-size:36px;font-weight:bold;">${r.final_score}</div>
+                  <div style="color:${fc};font-size:11px;">${r.flag} RISK</div>
+                </div>
+
+                ${renderBar("SENTIMENT", Number(r.sentiment_score || 0), fc)}
+                ${renderBar("FINANCIAL", Number(r.financial_score || 0), "#FF6600")}
+                ${renderBar("MOMENTUM", Number(r.momentum_score || 50), momentumColor)}
+                ${renderBar("ENVIRON (E)", Number(r.e_score || 0), "#00FF00")}
+                ${renderBar("SOCIAL (S)", Number(r.s_score || 0), "#00FFFF")}
+                ${renderBar("GOVERN (G)", Number(r.g_score || 0), "#FFFF00")}
+
+                <div style="margin-top:8px;padding-top:8px;border-top:1px solid #111;">
+                  <div style="color:#00FFFF;font-size:10px;margin-bottom:4px;">KEY TAKEAWAY</div>
+                  <div style="color:#FFF;font-size:11px;line-height:1.5;">
+                    ${buildCompareCardTakeaway(r)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+
+      <div class="panel" style="margin-top:6px;">
+        <div class="panel-header">HEAD TO HEAD</div>
+        <div id="chart-compare" style="height:240px;"></div>
+      </div>
+    `;
+
+    const cats = ["SENTIMENT", "FINANCIAL", "MOMENTUM", "E", "S", "G"];
+    const v1 = [
+      Number(r1.sentiment_score || 0),
+      Number(r1.financial_score || 0),
+      Number(r1.momentum_score || 50),
+      Number(r1.e_score || 0),
+      Number(r1.s_score || 0),
+      Number(r1.g_score || 0)
+    ];
+    const v2 = [
+      Number(r2.sentiment_score || 0),
+      Number(r2.financial_score || 0),
+      Number(r2.momentum_score || 50),
+      Number(r2.e_score || 0),
+      Number(r2.s_score || 0),
+      Number(r2.g_score || 0)
+    ];
+
+    Plotly.newPlot("chart-compare", [
+      {
+        type: "bar",
+        name: co1,
+        x: cats,
+        y: v1,
+        marker: { color: flagColour(r1.flag) },
+        text: v1.map(v => Number(v).toFixed(1)),
+        textposition: "outside",
+        textfont: { color: "#FFF", size: 9 }
+      },
+      {
+        type: "bar",
+        name: co2,
+        x: cats,
+        y: v2,
+        marker: { color: flagColour(r2.flag) },
+        text: v2.map(v => Number(v).toFixed(1)),
+        textposition: "outside",
+        textfont: { color: "#FFF", size: 9 }
+      }
+    ], {
+      barmode: "group",
+      paper_bgcolor: "#000",
+      plot_bgcolor: "#000",
+      font: { family: "Courier New", color: "#FF6600", size: 10 },
+      margin: { l: 30, r: 10, t: 10, b: 30 },
+      legend: { font: { color: "#FF6600" } },
+      yaxis: { showgrid: true, gridcolor: "#111", range: [0, 120], color: "#FF6600" },
+      xaxis: { color: "#FF6600" }
+    }, { responsive: true, displayModeBar: false });
+
+    setStatus("COMPARISON COMPLETE");
+  } catch (e) {
+    clearInterval(stepTimer);
+    hideLoader();
+    setStatus("ERROR: " + e.message);
+  }
+}
+function addToWatchlist() {
+  if (!lastResult) return;
+  const entry = {
+    company: lastResult.company, ticker: lastResult.ticker,
+    score: lastResult.final_score, flag: lastResult.flag
+  };
+  if (!watchlist.find(w => w.ticker === entry.ticker)) {
+    watchlist.push(entry);
+    localStorage.setItem("gl_watchlist", JSON.stringify(watchlist));
+    renderWatchlist();
+    setStatus("ADDED " + entry.company.toUpperCase() + " TO WATCHLIST");
+  }
+}
+
+function renderWatchlist() {
+  const cards = document.getElementById("watchlist-cards");
+  const grid = document.getElementById("watchlist-grid");
+  if (!watchlist.length) {
+    cards.innerHTML = `<div style="color:#333;font-size:10px;">No companies saved.</div>`;
+    grid.innerHTML = `<div style="color:#333;font-size:11px;">No companies saved yet.</div>`;
+    return;
+  }
+  const html = watchlist.map(w => {
+    const fc = flagColour(w.flag);
+    return `<div class="watch-card" onclick="loadFromWatchlist('${w.company}','${w.ticker}')">
+      <div>
+        <div class="watch-name">${w.company.substring(0,14).toUpperCase()}</div>
+        <div style="color:#444;font-size:9px;">${w.ticker}</div>
+      </div>
+      <div class="watch-score" style="color:${fc};">${w.score}</div>
+    </div>`;
+  }).join("");
+  cards.innerHTML = html;
+
+  grid.innerHTML = watchlist.map(w => {
+    const fc = flagColour(w.flag);
+    return `<div style="border:1px solid ${fc};padding:10px;text-align:center;cursor:pointer;"
+                 onclick="loadFromWatchlist('${w.company}','${w.ticker}')">
+      <div style="color:#00FFFF;font-size:11px;">${w.company}</div>
+      <div style="color:${fc};font-size:24px;font-weight:bold;">${w.score}</div>
+      <div style="color:${fc};font-size:10px;">${w.flag}</div>
+    </div>`;
+  }).join("");
+}
+
+function loadFromWatchlist(company, ticker) {
+  document.getElementById("company-input").value = company;
+  switchTabDirect("search");
+  runSearch(company, ticker);
+}
+
+function updateRecent(company, result) {
+  recent = recent.filter(r => r.company !== company);
+  recent.unshift({company, ticker:result.ticker,
+                  score:result.final_score, flag:result.flag});
+  recent = recent.slice(0, 5);
+  localStorage.setItem("gl_recent", JSON.stringify(recent));
+  renderRecent();
+}
+
+function renderRecent() {
+  const el = document.getElementById("recent-cards");
+  if (!recent.length) {
+    el.innerHTML = `<div style="color:#333;font-size:10px;">No recent searches.</div>`;
+    return;
+  }
+  el.innerHTML = recent.map(r => {
+    const fc = flagColour(r.flag);
+    return `<div class="watch-card" onclick="loadFromWatchlist('${r.company}','${r.ticker}')">
+      <div>
+        <div class="watch-name">${r.company.substring(0,14).toUpperCase()}</div>
+        <div style="color:#444;font-size:9px;">${r.ticker}</div>
+      </div>
+      <div class="watch-score" style="color:${fc};">${r.score}</div>
+    </div>`;
+  }).join("");
+}
+
+function updateTicker(trend) {
+  if (!trend.length) return;
+  const text = trend.map(h => "● " + h.title).join("   ·   ");
+  document.getElementById("ticker-content").textContent = text;
+}
+
+async function downloadPDF() {
+  if (!lastResult) return;
+  setStatus("GENERATING PDF...");
+  const res = await fetch("/api/pdf", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({result:lastResult, eli5:lastEli5})
+  });
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `GreenLens_${lastResult.ticker}.pdf`;
+  a.click();
+  setStatus("PDF DOWNLOADED");
+}
+
+function switchTabDirect(tab) {
+  document.querySelectorAll(".navtab").forEach((t,i) => {
+    const tabs = ["search","portfolio","compare","watchlist"];
+    t.classList.toggle("active", tabs[i]===tab);
+  });
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll("[id^='sidebar-']").forEach(t => t.style.display="none");
+  document.getElementById("tab-"+tab).classList.add("active");
+  const s = document.getElementById("sidebar-"+tab);
+  if (s) s.style.display = "block";
+}
+
+const SECTOR_ESG = {
+  "Technology": 72, "Financial Services": 58,
+  "Energy": 41, "Automobile": 52,
+  "Pharmaceuticals": 63, "Consumer Defensive": 67,
+  "Basic Materials": 45, "Industrials": 55,
+  "Healthcare": 65, "Utilities": 60,
+  "Communication": 61, "Real Estate": 54,
+};
+
+function renderFinSnapshot(fin) {
+  const container = document.getElementById("fin-snapshot");
+  if (!container) return;
+
+  if (!fin || Object.keys(fin).length === 0) {
+    container.innerHTML = `
+      <div style="grid-column:1/-1;color:#666;text-align:center;padding:18px;font-size:11px;">
+        Financial data unavailable
+      </div>`;
+    return;
+  }
+
+  const items = [
+    {label:"MARKET CAP",  value: displayValue(fin.market_cap)},
+    {label:"REVENUE",     value: displayValue(fin.revenue)},
+    {label:"P/E RATIO",   value: displayValue(fin.pe)},
+    {label:"ROE",         value: displayValue(fin.roe)},
+    {label:"D/E RATIO",   value: displayValue(fin.de_ratio)},
+    {label:"52W HIGH",    value: displayValue(fin["52w_high"])},
+    {label:"52W LOW",     value: displayValue(fin["52w_low"])},
+    {label:"PRICE",       value: displayValue(fin.price)},
+  ];
+
+  container.innerHTML = items.map(item => {
+    const missing = item.value === "Data unavailable";
+    return `
+      <div style="border:1px solid #1a1a1a;padding:6px;text-align:center;">
+        <div style="color:#0097A7;font-size:9px;margin-bottom:3px;">${item.label}</div>
+        <div style="color:${missing ? "#666" : "#FFFFFF"};font-size:${missing ? "11px" : "13px"};font-weight:bold;">
+          ${item.value}
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function renderScoreDerivation(r) {
+  const w = r.score_weights || {
+    sentiment: 0.50,
+    financial: 0.25,
+    governance: 0.20,
+    momentum: 0.05
+  };
+
+  const rows = [
+    {
+      label: "Sentiment (News)",
+      score: Number(r.sentiment_score ?? 50),
+      weight: w.sentiment
+    },
+    {
+      label: "Financial Health",
+      score: Number(r.financial_score ?? 50),
+      weight: w.financial
+    },
+    {
+      label: "Governance (Avg E/S/G)",
+      score: Number(r.governance_score ?? 50),
+      weight: w.governance
+    },
+    {
+      label: "Stock Momentum",
+      score: Number(r.momentum_score ?? 50),
+      weight: w.momentum
+    },
+  ];
+
+  const html = rows.map(row => {
+    const contrib = (row.score * row.weight).toFixed(2);
+    const pct = Math.round(row.weight * 100);
+    const col = row.score >= 66 ? "#00C853" : row.score >= 41 ? "#B8560A" : "#C62828";
+
+    return `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;">
+        <div style="width:180px;color:#0097A7;">${row.label}</div>
+        <div style="width:50px;color:${col};text-align:right;">${row.score.toFixed(1)}</div>
+        <div style="color:#444;">×</div>
+        <div style="width:30px;color:#B8560A;">${pct}%</div>
+        <div style="color:#444;">=</div>
+        <div style="width:40px;color:#FFFFFF;font-weight:bold;">${contrib}</div>
+        <div style="flex:1;background:#111;height:8px;">
+          <div style="width:${row.score}%;height:100%;background:${col};"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const gw = r.greenwashing || {};
+  let penaltyHtml = "";
+  if ((gw.score_penalty || 0) > 0) {
+    penaltyHtml = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;">
+        <div style="width:180px;color:#FFD600;">Greenwash Penalty</div>
+        <div style="width:50px;color:#FFD600;text-align:right;">−${Number(gw.score_penalty).toFixed(1)}</div>
+        <div style="color:#444;"></div>
+        <div style="width:30px;color:#FFD600;"></div>
+        <div style="color:#444;"></div>
+        <div style="width:40px;color:#FFD600;font-weight:bold;">−${Number(gw.score_penalty).toFixed(1)}</div>
+        <div style="flex:1;"></div>
+      </div>`;
+  }
+
+  const total = Number(r.final_score ?? 0);
+  const beforePenalty = r.score_before_penalty;
+
+  document.getElementById("score-derivation").innerHTML =
+    html + penaltyHtml + `
+      <div style="border-top:1px solid #333;margin-top:6px;padding-top:6px;
+                  font-size:12px;text-align:right;color:#FFFFFF;">
+        TOTAL:
+        <span style="color:${flagColour(r.flag)};font-size:16px;font-weight:bold;">
+          ${total.toFixed(2)}
+        </span> / 100
+        ${beforePenalty !== undefined && beforePenalty !== null
+          ? `<span style="color:#555;font-size:10px;margin-left:8px;">(before penalty: ${Number(beforePenalty).toFixed(2)})</span>`
+          : ""}
+      </div>`;
+}
+
+function renderSectorContext(r, peers) {
+  const sector = r.company_info?.sector || "Technology";
+  const sa = r.sector_analysis || {};
+
+  const sectorBenchmark = sa.sector_avg || (
+    peers && peers.length
+      ? Math.round((peers.reduce((a, p) => a + p.score, 0) / peers.length) * 10) / 10
+      : (SECTOR_ESG[sector] || 55)
+  );
+
+  const score = Number(r.final_score ?? 0);
+  const diffRaw = sa.vs_sector !== undefined ? Number(sa.vs_sector) : (score - sectorBenchmark);
+  const diff = Number(diffRaw.toFixed(1));
+  const diffCol = diff >= 0 ? "#00C853" : "#C62828";
+  const diffArrow = diff >= 0 ? "▲" : "▼";
+  const percentile = sa.percentile_label || "";
+
+  const sorted = Object.entries(SECTOR_ESG).sort((a, b) => b[1] - a[1]);
+  const rank = sorted.findIndex(([s]) => s === sector) + 1;
+
+  document.getElementById("sector-context").innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <div style="color:#0097A7;font-size:10px;margin-bottom:8px;">
+          SECTOR: ${sector.toUpperCase()}
+        </div>
+
+        <div style="margin-bottom:6px;font-size:11px;">
+          <span style="color:#B8560A;">SECTOR BENCHMARK:</span>
+          <span style="color:#FFF;margin-left:8px;">${sectorBenchmark}</span>
+        </div>
+
+        <div style="margin-bottom:6px;font-size:11px;">
+          <span style="color:#B8560A;">THIS COMPANY:</span>
+          <span style="color:${flagColour(r.flag)};margin-left:8px;font-size:16px;font-weight:bold;">
+            ${score.toFixed(2)}
+          </span>
+        </div>
+
+        <div style="font-size:13px;">
+          <span style="color:${diffCol};">${diffArrow} ${Math.abs(diff).toFixed(1)} vs sector benchmark</span>
+          ${percentile
+            ? `<span style="color:#9C27B0;margin-left:12px;font-size:11px;border:1px solid #9C27B0;padding:1px 6px;">${percentile}</span>`
+            : ""}
+        </div>
+
+        <div style="margin-top:6px;color:#444;font-size:10px;">
+          SECTOR RANK: #${rank} OF ${sorted.length} SECTORS
+        </div>
+      </div>
+
+      <div>
+        <div style="color:#0097A7;font-size:10px;margin-bottom:6px;">
+          ALL SECTOR RANKINGS
+        </div>
+
+        ${sorted.map(([s, avg]) => {
+          const isThis = s === sector;
+          const col = avg >= 66 ? "#00C853" : avg >= 41 ? "#B8560A" : "#C62828";
+
+          return `
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+              <div style="width:130px;font-size:9px;color:${isThis ? "#FFFFFF" : "#666"};">
+                ${s.toUpperCase()}
+              </div>
+              <div style="flex:1;background:#111;height:8px;position:relative;">
+                <div style="width:${avg}%;height:100%;background:${col};opacity:${isThis ? "1" : "0.65"};"></div>
+              </div>
+              <div style="width:24px;text-align:right;font-size:9px;color:${col};">
+                ${avg}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function updateHistory(ticker, score, flag) {
+  const key = `gl_history_${ticker}`;
+  let hist = JSON.parse(localStorage.getItem(key) || "[]");
+  hist.push({score, flag, time: new Date().toLocaleTimeString()});
+  hist = hist.slice(-10);
+  localStorage.setItem(key, JSON.stringify(hist));
+  return hist;
+}
+
+function formatHeadlineTime(raw) {
+  if (!raw) return "LATEST";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return raw;
+
+  const now = new Date();
+  const diff = now - d;
+  const mins = Math.floor(diff / 60000);
+  const hrs = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (mins < 60) return `${Math.max(mins, 1)}m ago`;
+  if (hrs < 24) return `${hrs}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString();
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+function isMissingValue(val) {
+  return val === null || val === undefined || val === "" || val === "—" || val === "-" || val === "None";
+}
+
+function displayValue(val, fallback = "Data unavailable") {
+  return isMissingValue(val) ? fallback : String(val);
+}
+
+function renderEmptyPlot(targetId, message, height = 300) {
+  Plotly.newPlot(targetId, [], {
+    paper_bgcolor: "#000",
+    plot_bgcolor: "#000",
+    height: height,
+    margin: { l: 20, r: 20, t: 20, b: 20 },
+    xaxis: { visible: false },
+    yaxis: { visible: false },
+    annotations: [{
+      text: message,
+      x: 0.5,
+      y: 0.5,
+      xref: "paper",
+      yref: "paper",
+      showarrow: false,
+      font: { family: "Courier New", size: 12, color: "#666" }
+    }]
+  }, { responsive: true, displayModeBar: false });
+}
+function renderNewsPanel(trend) {
+  const list = document.getElementById("news-list");
+  const count = document.getElementById("news-count");
+
+  if (!list || !count) return;
+
+  if (!trend || !trend.length) {
+    count.textContent = "0 STORIES";
+    list.innerHTML = `<div style="color:#333;font-size:11px;">No live headlines found for this company.</div>`;
+    return;
+  }
+
+  count.textContent = `${trend.length} STORIES`;
+
+  list.innerHTML = trend.slice(0, 14).map(h => {
+    const label = (h.label || "neutral").toLowerCase();
+    const badgeClass = label === "positive" ? "pos" : label === "negative" ? "neg" : "neu";
+    const badgeText = label === "positive" ? "POSITIVE" : label === "negative" ? "NEGATIVE" : "NEUTRAL";
+
+    const scoreColor =
+      label === "positive" ? "#00FF88" :
+      label === "negative" ? "#FF5C5C" : "#FFB74D";
+
+    const scoreText =
+      label === "positive" ? `+${(h.confidence || 0).toFixed(2)}` :
+      label === "negative" ? `-${(h.confidence || 0).toFixed(2)}` :
+      `${(h.confidence || 0).toFixed(2)}`;
+
+    return `
+      <div class="news-item">
+        <div class="news-meta">
+          <div class="news-source">${escapeHtml(h.source || "Google News RSS")}</div>
+          <div class="news-score" style="color:${scoreColor};">${scoreText}</div>
+        </div>
+
+        <a class="news-title" href="${h.link || "#"}" target="_blank" rel="noopener noreferrer">
+          ${escapeHtml(h.title || "Untitled headline")}
+        </a>
+
+        <div class="news-footer">
+          <span class="news-badge ${badgeClass}">${badgeText}</span>
+          <span class="news-time">${escapeHtml(formatHeadlineTime(h.published))}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+renderWatchlist();
+renderRecent();
+</script>
+</body>
+</html>
